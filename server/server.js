@@ -1,27 +1,20 @@
 // Importaciones
+require("dotenv").config();
 const express = require('express');
 const mongoose = require('mongoose');
 var bodyParser = require('body-parser');
-require('dotenv').config();
 
-
-
-//Inportar Rutas
-const appRoutes = require('./routes/app');
-const usuarioRoutes = require('./routes/usuario');
-const loginRoutes = require('./routes/login');
 //Inicializar
 const app = express();
 
-// Body Parser
 // parse application/x-www-form-urlencoded
-app.use(bodyParser.urlencoded({ extended: false }))
+app.use(bodyParser.urlencoded({ extended: false }));
+
+// parse application/json
 app.use(bodyParser.json());
 
-//Rutas
-app.use("/login", loginRoutes);
-app.use("/usuario", usuarioRoutes);
-app.use("/", appRoutes);
+//Llamado de routes
+app.use(require('./routes/app'));
 
 //Conexion BD
 mongoose.connect(
@@ -32,7 +25,7 @@ mongoose.connect(
         useFindAndModify: false,
         useUnifiedTopology: true
     },
-    err => {
+    (err) => {
         if (err) throw err;
         console.log("Base de datos conectada");
     }
