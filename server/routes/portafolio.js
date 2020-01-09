@@ -35,7 +35,6 @@ app.post('/', [verificaToken, verificaAdmin_Role], (req, res) => {
         titulo: body.titulo,
         mision: body.mision,
         vision: body.vision,
-        imagen: body.imagen,
         centro: body.centro
     });
     portafolio.save((err, portafolioDB) => {
@@ -63,7 +62,6 @@ app.put("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
         "titulo",
         "mision",
         "vision",
-        "imagen",
         "centro"
     ]);
 

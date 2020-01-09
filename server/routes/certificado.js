@@ -6,13 +6,16 @@ const {
   verificaAdmin_Role
 } = require("../middlewares/autenticacion");
 const _ = require("underscore");
+const fs = require('fs');
+const path = require("path");
+
 
 // ===============================================
 // Obtener todos los certificados de un usuario
 // ===============================================
 app.get("/", (req, res) => {
   let cedula = req.body.cedula
-  Certificado.find({ cedula }).exec((err, certificadoDB) => {
+  Certificado.find({ cedula }, 'imagen').exec((err, certificadoDB) => {
     if (err) {
       return res.status(500).json({
         ok: false,
@@ -20,16 +23,30 @@ app.get("/", (req, res) => {
         err
       });
     }
-    if (certificadoDB.length === 0) {
+    let [datos] = certificadoDB;
+    if (!datos) {
+      return res.status(400).json({
+        ok: false,
+        message: "No existe ese estudiante"
+      });
+    }
+    if (!datos.imagen) {
       return res.status(400).json({
         ok: false,
         message: "No existen certificados"
       });
     }
-    res.status(200).json({
-      ok: true,
-      certificadoDB
-    });
+    let pathImagen = path.resolve(
+      __dirname,
+      `../../uploads/certificados/${datos.imagen}`
+    );
+    if (fs.existsSync(pathImagen)) {
+      res.download(pathImagen);
+    }
+    // res.status(200).json({
+    //   ok: true,
+    //   certificadoDB
+    // });
   });
 });
 
@@ -60,7 +77,7 @@ app.post("/", [verificaToken, verificaAdmin_Role], (req, res) => {
   let body = req.body;
   let certificado = new Certificado({
     cedula: body.cedula,
-    certificados: body.certificados
+    nombre: body.nombre
   });
   certificado.save((err, certificadoDB) => {
     if (err) {
@@ -85,13 +102,13 @@ app.post("/", [verificaToken, verificaAdmin_Role], (req, res) => {
 });
 
 // ===============================================
-// Modificar información de la galeria
+// Modificar información del certificado
 // ===============================================
 app.put("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
   let usuario = req.usuario._id;
   let id = req.params.id;
   req.body.usuario = usuario;
-  let body = _.pick(req.body, ["certificados"]);
+  let body = _.pick(req.body, ["cedula","nombre"]);
   Certificado.findByIdAndUpdate(id, body, { new: true, runValidators: true }, (err, certificadoDB) => {
     if (err) {
       return res.status(500).json({

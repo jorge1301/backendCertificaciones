@@ -32,7 +32,6 @@ app.get('/', (req, res) => {
 app.post('/', [verificaToken, verificaToken], (req, res) => {
     let body = req.body;
     let portafolioCurso = new PortafolioCurso({
-        imagen: body.imagen,
         requisitos: body.requisitos,
         incluye: body.incluye,
         ciclos: body.ciclos
@@ -59,7 +58,6 @@ app.put('/:id', [verificaToken, verificaToken], (req, res) => {
     let id = req.params.id;
     req.body.usuario = usuario;
     let body = _.pick(req.body, [
-        "imagen",
         "requisitos",
         "incluye",
         "ciclos"

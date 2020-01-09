@@ -7,11 +7,14 @@ let certificadoSchema = new Schema({
     required: [true, "Es necesaria la cedula"],
     unique: true
   },
-  certificados: [
-    {
-      imagen: String
-    }
-  ]
+  nombre: {
+    type: String,
+    required: [true, "Es necesario el nombre"]
+  },
+  imagen: {
+    type: String,
+    required: false
+  }
 });
 
 module.exports = mongoose.model('Certificado', certificadoSchema);

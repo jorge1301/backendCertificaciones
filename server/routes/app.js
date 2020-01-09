@@ -12,6 +12,9 @@ const galeriaRoutes = require('./galeria');
 const agenciaRoutes = require("./agencia");
 const certificadoRoutes = require("./certificado");
 const busquedaRoutes = require("./busqueda");
+const uploadRoutes = require("./upload");
+const imagenesRoutes = require("./imagenes");
+
 
 //Rutas
 app.use("/login", loginRoutes);
@@ -24,5 +27,7 @@ app.use("/galeria", galeriaRoutes);
 app.use("/agencia", agenciaRoutes);
 app.use("/certificado", certificadoRoutes);
 app.use("/busqueda", busquedaRoutes);
+app.use("/upload", uploadRoutes );
+app.use("/imagen", imagenesRoutes);
 
 module.exports = app;

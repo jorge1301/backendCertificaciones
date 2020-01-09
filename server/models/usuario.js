@@ -9,7 +9,7 @@ let usuarioShema = new Schema({
     required: [true, "El correo es necesario"]
   },
   password: { type: String, required: [true, "La contraseña es necesaria"] },
-  img: { type: String, required: false },
+  imagen: { type: String, required: false },
   role: { type: String, required: true, default: "USER_ROLE" }
 });
 

@@ -6,6 +6,10 @@ let avanzadoShema = new Schema({
     type: String,
     required: [true, "El titulo es necesario"]
   },
+  imagen: { 
+    type: String, 
+    required: false 
+  },
   direccion: {
     type: String,
     required: [true, "La direccion es necesaria"]
