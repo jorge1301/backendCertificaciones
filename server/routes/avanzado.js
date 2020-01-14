@@ -6,6 +6,14 @@ const {
   verificaAdmin_Role
 } = require("../middlewares/autenticacion");
 const _ = require("underscore");
+const upload = require("../middlewares/storage");
+const fs = require("fs");
+
+//Storage middlewares
+let cargarArchivo = upload("avanzados");
+
+//variables
+let imagenAntigua, pathViejo, pathNuevaImagen, id, usuario;
 
 // ===============================================
 // Obtener todos los cursos avanzados
@@ -29,23 +37,31 @@ app.get("/", (req, res) => {
 // ===============================================
 // Ingresar un curso avanzado
 // ===============================================
-app.post("/", [verificaToken, verificaAdmin_Role], (req, res) => {
-  let body = req.body;
+app.post("/", cargarArchivo.single("imagen"), [verificaToken, verificaAdmin_Role], (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({
+      ok: false,
+      mensaje: "No se ha seleccionado un archivo valido"
+    });
+  }
+  let {titulo,direccion,fecha,descripcion,requisitos,proposito,metodologia,valor,incluye,programacion} = req.body;
   let avanzado = new Avanzado({
-    titulo: body.titulo,
-    direccion: body.direccion,
-    fecha: body.fecha,
-    descripcion: body.descripcion,
-    requisitos: body.requisitos,
-    proposito: body.proposito,
-    metodologia: body.metodologia,
-    valor: body.valor,
-    incluye: body.incluye,
-    programacion: body.programacion
+    titulo,
+    imagen: req.file.filename,
+    direccion,
+    fecha,
+    descripcion,
+    requisitos,
+    proposito,
+    metodologia,
+    valor,
+    incluye,
+    programacion
   });
 
   avanzado.save((err, avanzadoDB) => {
     if (err) {
+      fs.unlinkSync('./uploads/avanzados/' + req.file.filename);
       return res.status(500).json({
         ok: false,
         err
@@ -61,50 +77,71 @@ app.post("/", [verificaToken, verificaAdmin_Role], (req, res) => {
 // ===============================================
 // Modificar información de un curso avanzado
 // ===============================================
-app.put("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
-  let usuario = req.usuario._id;
-  let id = req.params.id;
+app.put("/:id", cargarArchivo.single("imagen"), [verificaToken, verificaAdmin_Role], (req, res) => {
+  usuario = req.usuario._id;
+  id = req.params.id;
+  if (!req.file) {
+    return res.status(400).json({
+      ok: false,
+      mensaje: "No se ha seleccionado un archivo"
+    });
+  }
+  pathNuevaImagen = `./uploads/avanzados/` + req.file.filename;
   req.body.usuario = usuario;
-  let body = _.pick(req.body, [
-    "titulo",
-    "direccion",
-    "fecha",
-    "descripcion",
-    "requisitos",
-    "proposito",
-    "metodologia",
-    "valor",
-    "incluye",
-    "programacion"
-  ]);
-
-  Avanzado.findByIdAndUpdate(id, body, { new: true, runValidators: true }, (err, avanzadoDB) => {
+  Avanzado.findById(id, (err, avanzado) => {
     if (err) {
+      fs.unlinkSync(pathNuevaImagen);
       return res.status(500).json({
         ok: false,
-        err
+        mensaje: "Error al buscar el curso avanzados",
+        errors: err
       });
     }
-    if (!avanzadoDB) {
+    if (!avanzado) {
+      fs.unlinkSync(pathNuevaImagen);
       return res.status(400).json({
         ok: false,
-        err: {
-          message: "No existe ese curso avanzado"
-        }
+        mensaje: "El curso avanzado no existe"
       });
     }
-    res.status(200).json({
-      ok: true,
-      avanzadoDB
+    imagenAntigua = avanzado.imagen;
+    let { titulo, direccion, fecha, descripcion, requisitos, proposito, metodologia, valor, incluye, programacion } = req.body;
+    avanzado.titulo = titulo;
+    avanzado.imagen = req.file.filename;
+    avanzado.direccion = direccion;
+    avanzado.fecha = fecha;
+    avanzado.descripcion = descripcion;
+    avanzado.requisitos = requisitos;
+    avanzado.proposito = proposito;
+    avanzado.metodologia = metodologia;
+    avanzado.valor = valor;
+    avanzado.incluye = incluye;
+    avanzado.programacion = programacion
+    avanzado.save((err, avanzadoDB) => {
+      if (err) {
+        fs.unlinkSync(pathNuevaImagen);
+        return res.status(400).json({
+          ok: false,
+          mensaje: "Error al actualizar el curso avanzado",
+          errors: err
+        });
+      }
+      pathViejo = `./uploads/avanzados/` + imagenAntigua;
+      if (fs.existsSync(pathViejo)) {
+        fs.unlinkSync(pathViejo);
+      }
+      res.status(200).json({
+        ok: true,
+        avanzadoDB
+      });
     });
   });
 });
-
 // ===============================================
 // Eliminar información de un curso avanzado
 // ===============================================
 app.delete("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
-  let id = req.params.id;
+  id = req.params.id;
   Avanzado.findByIdAndRemove(id, (err, avanzadoDB) => {
     if (err) {
       return res.status(500).json({
@@ -120,6 +157,7 @@ app.delete("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
         }
       });
     }
+    fs.unlinkSync(`./uploads/avanzados/` + avanzadoDB.imagen);
     res.status(200).json({
       ok: true,
       avanzadoDB

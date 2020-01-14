@@ -6,6 +6,14 @@ const {
   verificaAdmin_Role
 } = require("../middlewares/autenticacion");
 const _ = require("underscore");
+const upload = require("../middlewares/storage");
+const fs = require("fs");
+
+//Storage middlewares
+let cargarArchivo = upload("internacionales");
+
+//variables
+let imagenAntigua, pathViejo, pathNuevaImagen, id, usuario;
 
 // ===============================================
 // Obtener todos los cursos internacionales
@@ -29,10 +37,17 @@ app.get("/", (req, res) => {
 // ===============================================
 // Ingresar un curso internacional
 // ===============================================
-app.post("/", [verificaToken, verificaAdmin_Role], (req, res) => {
+app.post("/", cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Role], (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({
+      ok: false,
+      mensaje: "No se ha seleccionado un archivo valido"
+    });
+  }
   let body = req.body;
   let internacional = new Internacional({
     titulo: body.titulo,
+    imagen: req.file.filename,
     direccion: body.direccion,
     fecha: body.fecha,
     descripcion: body.descripcion,
@@ -46,6 +61,7 @@ app.post("/", [verificaToken, verificaAdmin_Role], (req, res) => {
 
   internacional.save((err, internacionalDB) => {
     if (err) {
+      fs.unlinkSync("./uploads/internacionales/" + req.file.filename);
       return res.status(500).json({
         ok: false,
         err
@@ -61,56 +77,73 @@ app.post("/", [verificaToken, verificaAdmin_Role], (req, res) => {
 // ===============================================
 // Modificar información de un curso internacional
 // ===============================================
-app.put("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
-  let usuario = req.usuario._id;
-  let id = req.params.id;
+app.put("/:id", cargarArchivo.single("imagen"), [verificaToken, verificaAdmin_Role], (req, res) => {
+  usuario = req.usuario._id;
+  id = req.params.id;
+  if (!req.file) {
+    return res.status(400).json({
+      ok: false,
+      mensaje: "No se ha seleccionado un archivo"
+    });
+  }
+  pathNuevaImagen = `./uploads/internacionales/` + req.file.filename;
   req.body.usuario = usuario;
-  let body = _.pick(req.body, [
-    "titulo",
-    "direccion",
-    "fecha",
-    "descripcion",
-    "requisitos",
-    "proposito",
-    "metodologia",
-    "valor",
-    "incluye",
-    "programacion"
-  ]);
-
-  Internacional.findByIdAndUpdate(
-    id,
-    body,
-    { new: true, runValidators: true },
-    (err, internacionalDB) => {
+  Internacional.findById(id, (err, internacional) => {
+    if (err) {
+      fs.unlinkSync(pathNuevaImagen);
+      return res.status(500).json({
+        ok: false,
+        mensaje: "Error al buscar el curso internacional",
+        errors: err
+      });
+    }
+    if (!internacional) {
+      fs.unlinkSync(pathNuevaImagen);
+      return res.status(400).json({
+        ok: false,
+        mensaje: "El curso internacional no existe"
+      });
+    }
+    imagenAntigua = internacional.imagen;
+    let { titulo, direccion, fecha, descripcion, requisitos, proposito, metodologia, valor, incluye, programacion } = req.body;
+    internacional.titulo = titulo;
+    internacional.imagen = req.file.filename;
+    internacional.direccion = direccion;
+    internacional.fecha = fecha;
+    internacional.descripcion = descripcion;
+    internacional.requisitos = requisitos;
+    internacional.proposito = proposito;
+    internacional.metodologia = metodologia;
+    internacional.valor = valor;
+    internacional.incluye = incluye;
+    internacional.programacion = programacion
+    internacional.save((err, internacionalDB) => {
       if (err) {
-        return res.status(500).json({
-          ok: false,
-          err
-        });
-      }
-      if (!internacionalDB) {
+        fs.unlinkSync(pathNuevaImagen);
         return res.status(400).json({
           ok: false,
-          err: {
-            message: "No existe ese curso internacional"
-          }
+          mensaje: "Error al actualizar el curso internacional",
+          errors: err
         });
+      }
+      pathViejo = `./uploads/internacionales/` + imagenAntigua;
+      if (fs.existsSync(pathViejo)) {
+        fs.unlinkSync(pathViejo);
       }
       res.status(200).json({
         ok: true,
         internacionalDB
       });
-    }
-  );
+    });
+  });
 });
 
 // ===============================================
 // Eliminar información de un curso internacional
 // ===============================================
 app.delete("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
-  let id = req.params.id;
-  Internacional.findByIdAndRemove(id, (err, internacionalDB) => {
+  id = req.params.id;
+  Internacional.findByIdAndDelete(id, (err, internacionalDB) => {
     if (err) {
       return res.status(500).json({
         ok: false,
@@ -121,10 +154,11 @@ app.delete("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
       return res.status(400).json({
         ok: false,
         err: {
-          message: "No existe ese curso internacional"
+          message: "No existe ese certificado"
         }
       });
     }
+    fs.unlinkSync(`./uploads/internacionales/` + internacionalDB.imagen);
     res.status(200).json({
       ok: true,
       internacionalDB

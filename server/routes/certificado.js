@@ -8,7 +8,13 @@ const {
 const _ = require("underscore");
 const fs = require('fs');
 const path = require("path");
+const upload = require("../middlewares/storage");
 
+//Storage middlewares
+let cargarArchivo = upload("certificados");
+
+//variables
+let imagenAntigua, pathViejo, pathNuevaImagen, id, usuario;
 
 // ===============================================
 // Obtener todos los certificados de un usuario
@@ -53,41 +59,50 @@ app.get("/", (req, res) => {
 // ===============================================
 // Obtener todos los certificados -- administrador
 // ===============================================
-app.get("/certificados",[verificaToken,verificaAdmin_Role], (req, res) => {
-   Certificado.find({}).exec((err, certificado) => {
-        if (err) {
-            return res.status(500).json({
-                ok: false,
-                message: 'Error al cargar recursos del certificado',
-                err
-            });
-        }
-        res.status(200).json({
-          ok: true,
-          certificado
-        });
+app.get("/certificados", [verificaToken, verificaAdmin_Role], (req, res) => {
+  Certificado.find({}).exec((err, certificado) => {
+    if (err) {
+      return res.status(500).json({
+        ok: false,
+        message: 'Error al cargar recursos del certificado',
+        err
+      });
+    }
+    res.status(200).json({
+      ok: true,
+      certificado
     });
+  });
 });
 
 
 // ===============================================
 // Ingresar certificados
 // ===============================================
-app.post("/", [verificaToken, verificaAdmin_Role], (req, res) => {
-  let body = req.body;
+app.post("/", cargarArchivo.single("imagen"), [verificaToken, verificaAdmin_Role], (req, res) => {
+  let { cedula, nombre } = req.body;
+  if (!req.file) {
+    return res.status(400).json({
+      ok: false,
+      mensaje: "No se ha seleccionado un archivo valido"
+    });
+  }
   let certificado = new Certificado({
-    cedula: body.cedula,
-    nombre: body.nombre
+    cedula,
+    nombre,
+    imagen: req.file.filename
   });
   certificado.save((err, certificadoDB) => {
     if (err) {
       if (err.code === 11000) {
+        fs.unlinkSync("./uploads/certificados/" + req.file.filename);
         return res.status(500).json({
           ok: false,
           message: 'Ya existe ese usuario'
         });
       }
       else {
+        fs.unlinkSync("./uploads/certificados/" + req.file.filename);
         return res.status(500).json({
           ok: false,
           err
@@ -104,27 +119,54 @@ app.post("/", [verificaToken, verificaAdmin_Role], (req, res) => {
 // ===============================================
 // Modificar información del certificado
 // ===============================================
-app.put("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
-  let usuario = req.usuario._id;
-  let id = req.params.id;
+app.put("/:id", cargarArchivo.single("imagen"), [verificaToken, verificaAdmin_Role], (req, res) => {
+  usuario = req.usuario._id;
+  id = req.params.id;
+  if (!req.file) {
+    return res.status(400).json({
+      ok: false,
+      mensaje: "No se ha seleccionado un archivo"
+    });
+  }
+  pathNuevaImagen = `./uploads/certificados/` + req.file.filename;
   req.body.usuario = usuario;
-  let body = _.pick(req.body, ["cedula","nombre"]);
-  Certificado.findByIdAndUpdate(id, body, { new: true, runValidators: true }, (err, certificadoDB) => {
+  req.body.imagen = req.file.filename;
+  Certificado.findById(id, (err, certificado) => {
     if (err) {
+      fs.unlinkSync(pathNuevaImagen);
       return res.status(500).json({
         ok: false,
-        err
+        mensaje: "Error al buscar el certificado",
+        errors: err
       });
     }
-    if (!certificadoDB) {
+    if (!certificado) {
+      fs.unlinkSync(pathNuevaImagen);
       return res.status(400).json({
         ok: false,
-        message: "No existe ese certificado"
+        mensaje: "El certificado no existe"
       });
     }
-    res.status(200).json({
-      ok: true,
-      certificadoDB
+    imagenAntigua = certificado.imagen;
+    certificado.nombre = req.body.nombre;
+    certificado.imagen = req.file.filename;
+    certificado.save((err, certificadoDB) => {
+      if (err) {
+        fs.unlinkSync(pathNuevaImagen);
+        return res.status(400).json({
+          ok: false,
+          mensaje: "Error al actualizar el certificado",
+          errors: err
+        });
+      }
+      pathViejo = `./uploads/certificados/` + imagenAntigua;
+      if (fs.existsSync(pathViejo)) {
+        fs.unlinkSync(pathViejo);
+      }
+      res.status(200).json({
+        ok: true,
+        certificadoDB
+      });
     });
   });
 });
@@ -133,7 +175,7 @@ app.put("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
 // Eliminar información de la galeria
 // ===============================================
 app.delete("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
-  let id = req.params.id;
+  id = req.params.id;
   Certificado.findByIdAndDelete(id, (err, certificadoDB) => {
     if (err) {
       return res.status(500).json({
@@ -149,6 +191,7 @@ app.delete("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
         }
       });
     }
+    fs.unlinkSync(`./uploads/certificados/` + certificadoDB.imagen);
     res.status(200).json({
       ok: true,
       certificadoDB
