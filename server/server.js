@@ -12,7 +12,7 @@ app.use(function(req, res, next) {
   res.header("Access-Control-Allow-Origin", process.env.ORIGIN); // update to match the domain you will make the request from
   res.header(
     "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept"
+    "Origin, X-Requested-With, Content-Type, Accept, X-HTTP-Method-Override"
   );
   res.header("Access-Control-Allow-Methods","POST, GET, PUT, DELETE, OPTIONS");
   next();

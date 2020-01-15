@@ -40,6 +40,7 @@ app.post('/', (req, res) => {
 
         res.status(200).json({
           ok: true,
+          id:usuarioDB.id,
           usuarioDB,
           token,
           body

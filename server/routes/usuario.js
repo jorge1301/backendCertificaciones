@@ -39,19 +39,16 @@ app.get("/",[verificaToken, verificaAdmin_Role], (req, res) => {
 // ===============================================
 // Actualizar usuario
 // ===============================================
+// 
 app.put("/:id", cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Role], (req, res) => {
   id = req.params.id;
-  let {nombre,email} = req.body;
-  if (!req.file) {
-    return res.status(400).json({
-      ok: false,
-      mensaje: "No se ha seleccionado un archivo"
-    });
+  let { nombre, email } = JSON.parse(req.body.data);
+  if (req.file) {
+     pathNuevaImagen = `./uploads/usuarios/` + req.file.filename;
   }
-  pathNuevaImagen = `./uploads/usuarios/` + req.file.filename;
   Usuario.findById(id, (err, usuario) => {
     if (err) {
-      fs.unlinkSync(pathNuevaImagen);
+      req.file ? fs.unlinkSync(pathNuevaImagen) : "";
       return res.status(500).json({
         ok: false,
         mensaje: "Error al buscar el usuario",
@@ -59,7 +56,7 @@ app.put("/:id", cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Ro
       });
     }
     if (!usuario) {
-      fs.unlinkSync(pathNuevaImagen);
+     req.file ? fs.unlinkSync(pathNuevaImagen) : "";
       return res.status(400).json({
         ok: false,
         mensaje: "El usuario no existe",
@@ -69,10 +66,10 @@ app.put("/:id", cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Ro
     imagenAntigua = usuario.imagen;
     usuario.nombre = nombre;
     usuario.email  = email;
-    usuario.imagen = req.file.filename;
+    usuario.imagen = req.file === undefined ? imagenAntigua : req.file.filename;
     usuario.save((err, usuarioGuardado) => {
       if (err) {
-        fs.unlinkSync(pathNuevaImagen);
+        req.file ? fs.unlinkSync(pathNuevaImagen) : "";
         return res.status(400).json({
           ok: false,
           mensaje: "Error al actualizar el usuario",
@@ -81,7 +78,7 @@ app.put("/:id", cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Ro
       }
       pathViejo = `./uploads/usuarios/` + imagenAntigua;
       if (fs.existsSync(pathViejo)) {
-        fs.unlinkSync(pathViejo);
+        req.file ? fs.unlinkSync(pathViejo) : "";
       }
       res.status(200).json({
         ok: true,
