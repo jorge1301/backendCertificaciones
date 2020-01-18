@@ -13,24 +13,59 @@ const fs = require('fs');
 let cargarArchivo = upload('agencias');
 
 //variables
-let imagenAntigua, pathViejo, pathNuevaImagen, id, usuario;
+let imagenAntigua, pathViejo, pathNuevaImagen, id, desde;
 
 // ===============================================
 // Obtener todos las agencias
 // ===============================================
 app.get("/", (req, res) => {
-    Agencia.find({}).exec((err, agencia) => {
+  desde = req.query.desde || 0;
+  desde = Number(desde);
+  Agencia.find({})
+    .skip(desde)
+    .limit(5)
+    .exec((err, agencia) => {
+      if (err) {
+        return res.status(500).json({
+          ok: false,
+          message: "Error al cargar recursos de las agencias",
+          err
+        });
+      }
+      Agencia.countDocuments({}, (err, total) => {
+        res.status(200).json({
+          ok: true,
+          agencia,
+          total
+        });
+      });
+    });
+});
+
+// ===============================================
+// Buscar Agencia
+// ===============================================
+app.get('/:id', [verificaToken, verificaAdmin_Role], (req, res) => {
+    id = req.params.id;
+    Agencia.findById(id, (err, agencia) => {
         if (err) {
             return res.status(500).json({
                 ok: false,
-                message: "Error al cargar recursos de las agencias",
+                mensaje: "Error al buscar la agencia",
                 err
+            });
+        }
+        if (!agencia) {
+            return res.status(400).json({
+                ok: false,
+                mensaje: "La agencia no existe"
             });
         }
         res.status(200).json({
             ok: true,
             agencia
         });
+
     });
 });
 
@@ -38,12 +73,12 @@ app.get("/", (req, res) => {
 // Ingresar informacion de las agencias
 // ===============================================
 app.post("/", cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Role], (req, res) => {
-    let { informacion } = req.body;
-    if (!req.file){
-      return res.status(400).json({
-        ok: false,
-        mensaje: "No se ha seleccionado un archivo valido"
-      });
+    let { informacion } = JSON.parse(req.body.data);
+    if (!req.file) {
+        return res.status(400).json({
+            ok: false,
+            mensaje: "No se ha seleccionado un archivo valido"
+        });
     }
     let agencia = new Agencia({
         imagen: req.file.filename,
@@ -53,8 +88,9 @@ app.post("/", cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Role
         if (err) {
             fs.unlinkSync("./uploads/agencias/" + req.file.filename);
             return res.status(500).json({
-                ok: false,
-                err
+              ok: false,
+              mensaje: "Error al guardar la agencia",
+              err
             });
         }
         res.status(201).json({
@@ -68,51 +104,46 @@ app.post("/", cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Role
 // Modificar información de la agencia
 // ===============================================
 app.put("/:id", cargarArchivo.single("imagen"), [verificaToken, verificaAdmin_Role], (req, res) => {
-    usuario = req.usuario._id;
     id = req.params.id;
-     if (!req.file) {
-       return res.status(400).json({
-         ok: false,
-         mensaje: "No se ha seleccionado un archivo"
-       });
-     }
-    pathNuevaImagen = `./uploads/agencias/` + req.file.filename;
-    req.body.usuario = usuario;
+    if (req.file) {
+        pathNuevaImagen = `./uploads/agencias/` + req.file.filename;
+    }
     Agencia.findById(id, (err, agencia) => {
         if (err) {
-            fs.unlinkSync(pathNuevaImagen);
+            req.file ? fs.unlinkSync(pathNuevaImagen) : "";
             return res.status(500).json({
-              ok: false,
-              mensaje: "Error al buscar la agencia",
-              errors: err
+                ok: false,
+                mensaje: "Error al buscar la agencia",
+                err
             });
         }
         if (!agencia) {
-          fs.unlinkSync(pathNuevaImagen);
-          return res.status(400).json({
-            ok: false,
-            mensaje: "La agencia no existe"
-          });
+            req.file ? fs.unlinkSync(pathNuevaImagen) : "";
+            return res.status(400).json({
+                ok: false,
+                mensaje: "La agencia no existe"
+            });
         }
+        let { informacion } = JSON.parse(req.body.data);
         imagenAntigua = agencia.imagen;
-        agencia.imagen = req.file.filename;
-        agencia.informacion = req.body.informacion;
+        agencia.imagen = req.file === undefined ? imagenAntigua : req.file.filename;
+        agencia.informacion = informacion;
         agencia.save((err, agenciaDB) => {
             if (err) {
-                fs.unlinkSync(pathNuevaImagen);
+                req.file ? fs.unlinkSync(pathNuevaImagen) : "";
                 return res.status(400).json({
                     ok: false,
                     mensaje: "Error al actualizar la agencia",
-                    errors: err
+                    err
                 });
             }
             pathViejo = `./uploads/agencias/` + imagenAntigua;
             if (fs.existsSync(pathViejo)) {
-                fs.unlinkSync(pathViejo);
+                req.file ? fs.unlinkSync(pathViejo) : "";
             }
             res.status(200).json({
-              ok: true,
-              agenciaDB
+                ok: true,
+                agenciaDB
             });
         });
     });
@@ -126,16 +157,15 @@ app.delete("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
     Agencia.findByIdAndDelete(id, (err, agenciaDB) => {
         if (err) {
             return res.status(500).json({
-                ok: false,
-                err
+              ok: false,
+              mensaje: "Error al buscar la agencia",
+              err
             });
         }
         if (!agenciaDB) {
             return res.status(400).json({
                 ok: false,
-                err: {
-                    message: "No existe esa imagen"
-                }
+                mensaje: "No existe esa agencia"
             });
         }
         fs.unlinkSync(`./uploads/agencias/` + agenciaDB.imagen);

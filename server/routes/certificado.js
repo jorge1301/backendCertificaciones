@@ -14,18 +14,18 @@ const upload = require("../middlewares/storage");
 let cargarArchivo = upload("certificados");
 
 //variables
-let imagenAntigua, pathViejo, pathNuevaImagen, id, usuario;
+let imagenAntigua, pathViejo, pathNuevaImagen, id, desde;
 
 // ===============================================
 // Obtener todos los certificados de un usuario
 // ===============================================
 app.get("/", (req, res) => {
-  let cedula = req.body.cedula
+  let {cedula} = JSON.parse(req.body.data);
   Certificado.find({ cedula }, 'imagen').exec((err, certificadoDB) => {
     if (err) {
       return res.status(500).json({
         ok: false,
-        message: "Error al cargar recursos del certificado",
+        mensaje: "Error al cargar recursos del certificado",
         err
       });
     }
@@ -33,13 +33,13 @@ app.get("/", (req, res) => {
     if (!datos) {
       return res.status(400).json({
         ok: false,
-        message: "No existe ese estudiante"
+        mensaje: "No existe ese estudiante"
       });
     }
     if (!datos.imagen) {
       return res.status(400).json({
         ok: false,
-        message: "No existen certificados"
+        mensaje: "No existen certificados"
       });
     }
     let pathImagen = path.resolve(
@@ -60,19 +60,27 @@ app.get("/", (req, res) => {
 // Obtener todos los certificados -- administrador
 // ===============================================
 app.get("/certificados", [verificaToken, verificaAdmin_Role], (req, res) => {
-  Certificado.find({}).exec((err, certificado) => {
-    if (err) {
-      return res.status(500).json({
-        ok: false,
-        message: 'Error al cargar recursos del certificado',
-        err
+  desde = req.query.desde || 0;
+  desde = Number(desde);
+  Certificado.find({})
+    .skip(desde)
+    .limit(5)
+    .exec((err, certificado) => {
+      if (err) {
+        return res.status(500).json({
+          ok: false,
+          mensaje: "Error al cargar recursos del certificado",
+          err
+        });
+      }
+      Certificado.countDocuments({}, (err, total) => {
+        res.status(200).json({
+          ok: true,
+          certificado,
+          total
+        });
       });
-    }
-    res.status(200).json({
-      ok: true,
-      certificado
     });
-  });
 });
 
 
@@ -80,7 +88,7 @@ app.get("/certificados", [verificaToken, verificaAdmin_Role], (req, res) => {
 // Ingresar certificados
 // ===============================================
 app.post("/", cargarArchivo.single("imagen"), [verificaToken, verificaAdmin_Role], (req, res) => {
-  let { cedula, nombre } = req.body;
+  let { cedula, nombre } = JSON.parse(req.body.data);
   if (!req.file) {
     return res.status(400).json({
       ok: false,
@@ -98,13 +106,14 @@ app.post("/", cargarArchivo.single("imagen"), [verificaToken, verificaAdmin_Role
         fs.unlinkSync("./uploads/certificados/" + req.file.filename);
         return res.status(500).json({
           ok: false,
-          message: 'Ya existe ese usuario'
+          mensaje: 'Ya existe ese usuario'
         });
       }
       else {
         fs.unlinkSync("./uploads/certificados/" + req.file.filename);
         return res.status(500).json({
           ok: false,
+          mensaje: "Error al guardar el certificado",
           err
         });
       }
@@ -120,48 +129,42 @@ app.post("/", cargarArchivo.single("imagen"), [verificaToken, verificaAdmin_Role
 // Modificar información del certificado
 // ===============================================
 app.put("/:id", cargarArchivo.single("imagen"), [verificaToken, verificaAdmin_Role], (req, res) => {
-  usuario = req.usuario._id;
   id = req.params.id;
-  if (!req.file) {
-    return res.status(400).json({
-      ok: false,
-      mensaje: "No se ha seleccionado un archivo"
-    });
-  }
-  pathNuevaImagen = `./uploads/certificados/` + req.file.filename;
-  req.body.usuario = usuario;
-  req.body.imagen = req.file.filename;
+  if (req.file) {
+    pathNuevaImagen = `./uploads/certificados/` + req.file.filename;
+  };
   Certificado.findById(id, (err, certificado) => {
     if (err) {
-      fs.unlinkSync(pathNuevaImagen);
+      req.file ? fs.unlinkSync(pathNuevaImagen) : "";
       return res.status(500).json({
         ok: false,
         mensaje: "Error al buscar el certificado",
-        errors: err
+        err
       });
     }
     if (!certificado) {
-      fs.unlinkSync(pathNuevaImagen);
+      req.file ? fs.unlinkSync(pathNuevaImagen) : "";
       return res.status(400).json({
         ok: false,
         mensaje: "El certificado no existe"
       });
     }
+    let { nombre } = JSON.parse(req.body.data);
     imagenAntigua = certificado.imagen;
-    certificado.nombre = req.body.nombre;
-    certificado.imagen = req.file.filename;
+    certificado.nombre = nombre;
+    certificado.imagen = req.file === undefined ? imagenAntigua : req.file.filename;
     certificado.save((err, certificadoDB) => {
       if (err) {
-        fs.unlinkSync(pathNuevaImagen);
+        req.file ? fs.unlinkSync(pathNuevaImagen) : "";
         return res.status(400).json({
           ok: false,
           mensaje: "Error al actualizar el certificado",
-          errors: err
+          err
         });
       }
       pathViejo = `./uploads/certificados/` + imagenAntigua;
       if (fs.existsSync(pathViejo)) {
-        fs.unlinkSync(pathViejo);
+        req.file ? fs.unlinkSync(pathViejo) : "";
       }
       res.status(200).json({
         ok: true,
@@ -180,15 +183,14 @@ app.delete("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
     if (err) {
       return res.status(500).json({
         ok: false,
+        mensaje: "Error al buscar el certificado",
         err
       });
     }
     if (!certificadoDB) {
       return res.status(400).json({
         ok: false,
-        err: {
-          message: "No existe ese certificado"
-        }
+        mensaje: "No existe ese certificado"
       });
     }
     fs.unlinkSync(`./uploads/certificados/` + certificadoDB.imagen);

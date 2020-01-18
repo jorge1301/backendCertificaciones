@@ -18,22 +18,22 @@ let imagenAntigua, pathViejo, pathNuevaImagen, id;
 // ===============================================
 // Obtener todos los usuarios
 // ===============================================
-app.get("/",[verificaToken, verificaAdmin_Role], (req, res) => {
-    Usuario.find({}, 'nombre email img role')
-        .exec(
-        (err,usuarios)=>{
-        if(err){
-            return res.status(500).json({
-              ok: false,
-              mensaje: "Error cargando usuarios",
-              errors: err
-            });
+app.get("/", [verificaToken, verificaAdmin_Role], (req, res) => {
+  Usuario.find({}, 'nombre email img role')
+    .exec(
+      (err, usuarios) => {
+        if (err) {
+          return res.status(500).json({
+            ok: false,
+            mensaje: "Error cargando usuarios",
+            errors: err
+          });
         }
-         res.status(200).json({
-           ok: true,
-           usuarios
-         });
-    })
+        res.status(200).json({
+          ok: true,
+          usuarios
+        });
+      })
 });
 
 // ===============================================
@@ -44,7 +44,7 @@ app.put("/:id", cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Ro
   id = req.params.id;
   let { nombre, email } = JSON.parse(req.body.data);
   if (req.file) {
-     pathNuevaImagen = `./uploads/usuarios/` + req.file.filename;
+    pathNuevaImagen = `./uploads/usuarios/` + req.file.filename;
   }
   Usuario.findById(id, (err, usuario) => {
     if (err) {
@@ -56,7 +56,7 @@ app.put("/:id", cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Ro
       });
     }
     if (!usuario) {
-     req.file ? fs.unlinkSync(pathNuevaImagen) : "";
+      req.file ? fs.unlinkSync(pathNuevaImagen) : "";
       return res.status(400).json({
         ok: false,
         mensaje: "El usuario no existe",
@@ -65,7 +65,7 @@ app.put("/:id", cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Ro
     }
     imagenAntigua = usuario.imagen;
     usuario.nombre = nombre;
-    usuario.email  = email;
+    usuario.email = email;
     usuario.imagen = req.file === undefined ? imagenAntigua : req.file.filename;
     usuario.save((err, usuarioGuardado) => {
       if (err) {

@@ -13,25 +13,33 @@ const fs = require("fs");
 let cargarArchivo = upload("internacionales");
 
 //variables
-let imagenAntigua, pathViejo, pathNuevaImagen, id, usuario;
+let imagenAntigua, pathViejo, pathNuevaImagen, id, desde;
 
 // ===============================================
 // Obtener todos los cursos internacionales
 // ===============================================
 app.get("/", (req, res) => {
-  Internacional.find({}).exec((err, internacional) => {
-    if (err) {
-      return res.status(500).json({
-        ok: false,
-        mensaje: "Error cargando cursos internacionales",
-        errors: err
+  desde = req.query.desde || 0;
+  desde = Number(desde);
+  Internacional.find({})
+    .skip(desde)
+    .limit(5)
+    .exec((err, internacional) => {
+      if (err) {
+        return res.status(500).json({
+          ok: false,
+          mensaje: "Error cargando cursos internacionales",
+          err
+        });
+      }
+      Internacional.countDocuments({}, (err, total) => {
+        res.status(200).json({
+          ok: true,
+          internacional,
+          total
+        });
       });
-    }
-    res.status(200).json({
-      ok: true,
-      internacional
     });
-  });
 });
 
 // ===============================================
@@ -44,19 +52,19 @@ app.post("/", cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Role
       mensaje: "No se ha seleccionado un archivo valido"
     });
   }
-  let body = req.body;
+  let { titulo, direccion, fecha, descripcion, requisitos, proposito, metodologia, valor, incluye, programacion } = JSON.parse(req.body.data);
   let internacional = new Internacional({
-    titulo: body.titulo,
+    titulo,
     imagen: req.file.filename,
-    direccion: body.direccion,
-    fecha: body.fecha,
-    descripcion: body.descripcion,
-    requisitos: body.requisitos,
-    proposito: body.proposito,
-    metodologia: body.metodologia,
-    valor: body.valor,
-    incluye: body.incluye,
-    programacion: body.programacion
+    direccion,
+    fecha,
+    descripcion,
+    requisitos,
+    proposito,
+    metodologia,
+    valor,
+    incluye,
+    programacion
   });
 
   internacional.save((err, internacionalDB) => {
@@ -64,6 +72,7 @@ app.post("/", cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Role
       fs.unlinkSync("./uploads/internacionales/" + req.file.filename);
       return res.status(500).json({
         ok: false,
+        mensaje: "Error al guardar el curso internacional",
         err
       });
     }
@@ -78,36 +87,30 @@ app.post("/", cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Role
 // Modificar información de un curso internacional
 // ===============================================
 app.put("/:id", cargarArchivo.single("imagen"), [verificaToken, verificaAdmin_Role], (req, res) => {
-  usuario = req.usuario._id;
   id = req.params.id;
-  if (!req.file) {
-    return res.status(400).json({
-      ok: false,
-      mensaje: "No se ha seleccionado un archivo"
-    });
+  if (req.file) {
+    pathNuevaImagen = `./uploads/internacionales/` + req.file.filename;
   }
-  pathNuevaImagen = `./uploads/internacionales/` + req.file.filename;
-  req.body.usuario = usuario;
   Internacional.findById(id, (err, internacional) => {
     if (err) {
-      fs.unlinkSync(pathNuevaImagen);
+      req.file ? fs.unlinkSync(pathNuevaImagen) : "";
       return res.status(500).json({
         ok: false,
         mensaje: "Error al buscar el curso internacional",
-        errors: err
+        err
       });
     }
     if (!internacional) {
-      fs.unlinkSync(pathNuevaImagen);
+      req.file ? fs.unlinkSync(pathNuevaImagen) : "";
       return res.status(400).json({
         ok: false,
         mensaje: "El curso internacional no existe"
       });
     }
+    let { titulo, direccion, fecha, descripcion, requisitos, proposito, metodologia, valor, incluye, programacion } = JSON.parse(req.body.data);
     imagenAntigua = internacional.imagen;
-    let { titulo, direccion, fecha, descripcion, requisitos, proposito, metodologia, valor, incluye, programacion } = req.body;
     internacional.titulo = titulo;
-    internacional.imagen = req.file.filename;
+    internacional.imagen = req.file === undefined ? imagenAntigua : req.file.filename;
     internacional.direccion = direccion;
     internacional.fecha = fecha;
     internacional.descripcion = descripcion;
@@ -119,16 +122,16 @@ app.put("/:id", cargarArchivo.single("imagen"), [verificaToken, verificaAdmin_Ro
     internacional.programacion = programacion
     internacional.save((err, internacionalDB) => {
       if (err) {
-        fs.unlinkSync(pathNuevaImagen);
+        req.file ? fs.unlinkSync(pathNuevaImagen) : "";
         return res.status(400).json({
           ok: false,
           mensaje: "Error al actualizar el curso internacional",
-          errors: err
+          err
         });
       }
       pathViejo = `./uploads/internacionales/` + imagenAntigua;
       if (fs.existsSync(pathViejo)) {
-        fs.unlinkSync(pathViejo);
+        req.file ? fs.unlinkSync(pathViejo) : "";
       }
       res.status(200).json({
         ok: true,
@@ -147,15 +150,14 @@ app.delete("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
     if (err) {
       return res.status(500).json({
         ok: false,
+        mensaje: "Error al buscar el curso internacional",
         err
       });
     }
     if (!internacionalDB) {
       return res.status(400).json({
         ok: false,
-        err: {
-          message: "No existe ese certificado"
-        }
+        mensaje: "No existe ese certificado"
       });
     }
     fs.unlinkSync(`./uploads/internacionales/` + internacionalDB.imagen);

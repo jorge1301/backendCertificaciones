@@ -13,32 +13,40 @@ const fs = require("fs");
 let cargarArchivo = upload("galerias");
 
 //variables
-let imagenAntigua, pathViejo, pathNuevaImagen, id, usuario;
+let imagenAntigua, pathViejo, pathNuevaImagen, id, desde;
 
 // ===============================================
 // Obtener todas las imagenes de galeria
 // ===============================================
-app.get('/', (req, res) => {
-    Galeria.find({}).exec((err, galeria) => {
-        if (err) {
-            return res.status(500).json({
-                ok: false,
-                message: 'Error al cargar recursos de la galeria',
-                err
+app.get("/", (req, res) => {
+    desde = req.query.desde || 0;
+    desde = Number(desde);
+    Galeria.find({})
+        .skip(desde)
+        .limit(5)
+        .exec((err, galeria) => {
+            if (err) {
+                return res.status(500).json({
+                    ok: false,
+                    mensaje: "Error al cargar recursos de la galeria",
+                    err
+                });
+            }
+            Galeria.countDocuments({}, (err, total) => {
+              res.status(200).json({
+                ok: true,
+                galeria,
+                total
+              });
             });
-        }
-        res.status(200).json({
-            ok: true,
-            galeria
         });
-    });
 });
 
 // ===============================================
 // Ingresar imagenes en galeria
 // ===============================================
 app.post('/', cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Role], (req, res) => {
-    let { informacion } = req.body;
+    let { informacion } = JSON.parse(req.body.data);
     if (!req.file) {
         return res.status(400).json({
             ok: false,
@@ -55,6 +63,7 @@ app.post('/', cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Role
             fs.unlinkSync("./uploads/galerias/" + req.file.filename);
             return res.status(500).json({
                 ok: false,
+                mensaje: "Error al guardar la galeria",
                 err
             });
         }
@@ -69,47 +78,42 @@ app.post('/', cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Role
 // Modificar información de la galeria
 // ===============================================
 app.put("/:id", cargarArchivo.single("imagen"), [verificaToken, verificaAdmin_Role], (req, res) => {
-    usuario = req.usuario._id;
     id = req.params.id;
-     if (!req.file) {
-       return res.status(400).json({
-         ok: false,
-         mensaje: "No se ha seleccionado un archivo"
-       });
-     }
-    pathNuevaImagen = `./uploads/galerias/` + req.file.filename;
-    req.body.usuario = usuario;
+    if (req.file) {
+        pathNuevaImagen = `./uploads/galerias/` + req.file.filename;
+    }
     Galeria.findById(id, (err, galeria) => {
         if (err) {
-            fs.unlinkSync(pathNuevaImagen);
+            req.file ? fs.unlinkSync(pathNuevaImagen) : "";
             return res.status(500).json({
-              ok: false,
-              mensaje: "Error al buscar la galeria",
-              errors: err
+                ok: false,
+                mensaje: "Error al buscar la galeria",
+                err
             });
         }
         if (!galeria) {
-          fs.unlinkSync(pathNuevaImagen);
-          return res.status(400).json({
-            ok: false,
-            mensaje: "La galeria no existe"
-          });
+            req.file ? fs.unlinkSync(pathNuevaImagen) : "";
+            return res.status(400).json({
+                ok: false,
+                mensaje: "La galeria no existe"
+            });
         }
+        let { informacion } = JSON.parse(req.body.data);
         imagenAntigua = galeria.imagen;
-        galeria.imagen = req.file.filename;
-        galeria.informacion = req.body.informacion;
+        galeria.imagen = req.file === undefined ? imagenAntigua : req.file.filename;
+        galeria.informacion = informacion;
         galeria.save((err, galeriaDB) => {
             if (err) {
-                fs.unlinkSync(pathNuevaImagen);
+                req.file ? fs.unlinkSync(pathNuevaImagen) : "";
                 return res.status(400).json({
                     ok: false,
                     mensaje: "Error al actualizar la galeria",
-                    errors: err
+                    err
                 });
             }
             pathViejo = `./uploads/galerias/` + imagenAntigua;
             if (fs.existsSync(pathViejo)) {
-                fs.unlinkSync(pathViejo);
+                req.file ? fs.unlinkSync(pathViejo) : "";
             }
             res.status(200).json({
                 ok: true,
@@ -128,15 +132,14 @@ app.delete('/:id', [verificaToken, verificaAdmin_Role], (req, res) => {
         if (err) {
             return res.status(500).json({
                 ok: false,
+                mensaje: "Error al buscar la galeria",
                 err
             });
         }
         if (!galeriaDB) {
             return res.status(400).json({
                 ok: false,
-                err: {
-                    message: 'No existe esa imagen'
-                }
+                mensaje: 'No existe esa galeria'
             });
         }
         fs.unlinkSync(`./uploads/galerias/` + galeriaDB.imagen);

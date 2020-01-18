@@ -6,6 +6,7 @@ const Certificado = require("../models/certificado");
 const Galeria = require("../models/galeria");
 const Internacional = require("../models/internacional");
 const Portafolio = require("../models/portafolio");
+const PortafolioCursos = require("../models/portafolio_curso");
 
 const {
   verificaToken,
@@ -16,33 +17,35 @@ const _ = require("underscore");
 app.get('/coleccion/:tabla/:busqueda', [verificaToken, verificaAdmin_Role], (req, res) => {
   let busqueda = req.params.busqueda;
   let tabla = req.params.tabla;
-  console.log(tabla);
   let regex = new RegExp(busqueda, "i");
   let promesa;
   switch (tabla) {
-    case 'agencias':
+    case "agencias":
       promesa = buscarAgencias(regex);
       break;
-    case 'avanzados':
+    case "avanzados":
       promesa = buscarCursosAvanzados(regex);
       break;
-    case 'certificados':
+    case "certificados":
       promesa = buscarCertificados(regex);
       break;
-    case 'galeria':
+    case "galeria":
       promesa = buscarGaleria(regex);
       break;
-    case 'internacionales':
+    case "internacionales":
       promesa = buscarCursosInternacionales(regex);
       break;
-    case 'portafolio':
+    case "portafolio":
       promesa = buscarPortafolio(regex);
+      break;
+    case "portafolioCursos":
+      promesa = buscarPortafolioCursos(regex);
       break;
 
     default:
       return res.status(400).json({
         ok: false,
-        err: 'No existe esa coleccion'
+        err: "No existe esa coleccion"
       });
   }
   promesa.then(data => {
@@ -62,9 +65,9 @@ app.get('/:busqueda', [verificaToken, verificaAdmin_Role], (req, res) => {
     buscarCertificados(regex),
     buscarGaleria(regex),
     buscarCursosInternacionales(regex),
-    buscarPortafolio(regex)
-  ])
-  .then(respuestas => {
+    buscarPortafolio(regex),
+    buscarPortafolioCursos(regex)
+  ]).then(respuestas => {
     res.status(200).json({
       ok: true,
       agencias: respuestas[0],
@@ -154,6 +157,20 @@ function buscarPortafolio(regex) {
       .exec((err, portafolio) => {
         if (err) {
           reject("Error al cargar el portafolio", err);
+        } else {
+          resolve(portafolio);
+        }
+      });
+  });
+}
+
+function buscarPortafolioCursos(regex) {
+  return new Promise((resolve, reject) => {
+    PortafolioCursos.find()
+      .or([{ titulo: regex }])
+      .exec((err, portafolio) => {
+        if (err) {
+          reject("Error al cargar el curso del portafolio", err);
         } else {
           resolve(portafolio);
         }

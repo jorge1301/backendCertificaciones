@@ -13,25 +13,33 @@ const fs = require("fs");
 let cargarArchivo = upload("portafolios");
 
 //variables
-let imagenAntigua, pathViejo, pathNuevaImagen, id, usuario;
+let imagenAntigua, pathViejo, pathNuevaImagen, id, desde;
 
 // ===============================================
 // Obtener toda la informacion del portafolio
 // ===============================================
-app.get('/', (req, res) => {
-  Portafolio.find({}).exec((err, portafolio) => {
-    if (err) {
-      return res.status(500).json({
-        ok: false,
-        mensaje: 'Error cargando el portafolio ',
-        err
-      })
-    }
-    res.status(200).json({
-      ok: true,
-      portafolio
+app.get("/", (req, res) => {
+  desde = req.query.desde || 0;
+  desde = Number(desde);
+  Portafolio.find({})
+    .skip(desde)
+    .limit(5)
+    .exec((err, portafolio) => {
+      if (err) {
+        return res.status(500).json({
+          ok: false,
+          mensaje: "Error cargando el portafolio ",
+          err
+        });
+      }
+      Portafolio.countDocuments({}, (err, total) => {
+        res.status(200).json({
+          ok: true,
+          portafolio,
+          total
+        });
+      });
     });
-  });
 });
 
 // ===============================================
@@ -44,7 +52,7 @@ app.post('/', cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Role
       mensaje: "No se ha seleccionado un archivo valido"
     });
   }
-  let { titulo, mision, vision, centro } = req.body;
+  let { titulo, mision, vision, centro } = JSON.parse(req.body.data);
   let portafolio = new Portafolio({
     titulo,
     imagen: req.file.filename,
@@ -57,6 +65,7 @@ app.post('/', cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Role
       fs.unlinkSync("./uploads/portafolios/" + req.file.filename);
       return res.status(500).json({
         ok: false,
+        mensaje: "Error al guardar el portafolio",
         err
       });
     }
@@ -72,50 +81,44 @@ app.post('/', cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Role
 // ===============================================
 app.put("/:id", cargarArchivo.single("imagen"), [verificaToken, verificaAdmin_Role], (req, res) => {
   usuario = req.usuario._id;
-  id = req.params.id;
-  if (!req.file) {
-    return res.status(400).json({
-      ok: false,
-      mensaje: "No se ha seleccionado un archivo"
-    });
+  if (req.file) {
+    pathNuevaImagen = `./uploads/portafolios/` + req.file.filename;
   }
-  pathNuevaImagen = `./uploads/portafolios/` + req.file.filename;
-  req.body.usuario = usuario;
   Portafolio.findById(id, (err, portafolio) => {
     if (err) {
-      fs.unlinkSync(pathNuevaImagen);
+      req.file ? fs.unlinkSync(pathNuevaImagen) : "";
       return res.status(500).json({
         ok: false,
         mensaje: "Error al buscar el portafolio",
-        errors: err
+        err
       });
     }
     if (!portafolio) {
-      fs.unlinkSync(pathNuevaImagen);
+      req.file ? fs.unlinkSync(pathNuevaImagen) : "";
       return res.status(400).json({
         ok: false,
         mensaje: "El portafolio no existe"
       });
     }
+    let { titulo, mision, vision, centro } = JSON.parse(req.body.data);
     imagenAntigua = portafolio.imagen;
-    let { titulo, mision, vision, centro } = req.body;
     portafolio.titulo = titulo;
-    portafolio.imagen = req.file.filename;
+    portafolio.imagen = req.file === undefined ? imagenAntigua : req.file.filename;
     portafolio.mision = mision;
     portafolio.vision = vision;
     portafolio.centro = centro;
     portafolio.save((err, portafolioDB) => {
       if (err) {
-        fs.unlinkSync(pathNuevaImagen);
+        req.file ? fs.unlinkSync(pathNuevaImagen) : "";
         return res.status(400).json({
           ok: false,
           mensaje: "Error al actualizar el portafolio",
-          errors: err
+          err
         });
       }
       pathViejo = `./uploads/portafolios/` + imagenAntigua;
       if (fs.existsSync(pathViejo)) {
-        fs.unlinkSync(pathViejo);
+        req.file ? fs.unlinkSync(pathViejo) : "";
       }
       res.status(200).json({
         ok: true,
@@ -134,15 +137,14 @@ app.delete('/:id', [verificaToken, verificaAdmin_Role], (req, res) => {
     if (err) {
       return res.status(500).json({
         ok: false,
+        mensaje: "Error al buscar el portafolio",
         err
-      })
+      });
     }
     if (!portafolioDB) {
       return res.status(500).json({
         ok: false,
-        err: {
-          message: 'No existe ese portafolio'
-        }
+        mensaje: 'No existe ese portafolio'
       });
     }
     fs.unlinkSync(`./uploads/portafolios/` + portafolioDB.imagen);

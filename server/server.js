@@ -28,20 +28,33 @@ app.use(bodyParser.json());
 app.use(require('./routes/app'));
 
 //Conexion BD
-mongoose.connect(
+mongoose
+  .connect(
     process.env.MONGODB_URI,
     {
-        useNewUrlParser: true,
-        useCreateIndex: true,
-        useFindAndModify: false,
-        useUnifiedTopology: true
+      useNewUrlParser: true,
+      useCreateIndex: true,
+      useFindAndModify: false,
+      useUnifiedTopology: true
     },
-    (err) => {
-        if (err) throw err;
-        console.log("Base de datos conectada");
+    err => {
+      if (err) throw err;
+      console.log("Base de datos conectada");
     }
-)
-    .catch(err => console.log);
+  )
+  .catch(err => console.log);
+
+    // try {
+    //   await mongoose.connect(process.env.MONGODB_URI, {
+    //     useNewUrlParser: true,
+    //     useCreateIndex: true,
+    //     useFindAndModify: false,
+    //     useUnifiedTopology: true,
+    //     autoReconnect
+    //   });
+    // } catch (error) {
+    //   handleError(error);
+    // }
 
 
 //Iniciar Servidor
