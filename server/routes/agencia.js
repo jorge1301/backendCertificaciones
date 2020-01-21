@@ -20,6 +20,9 @@ let imagenAntigua, pathViejo, pathNuevaImagen, id, desde;
 // ===============================================
 app.get("/", (req, res) => {
   desde = req.query.desde || 0;
+  if (desde < 0) {
+    desde = 0;
+  }
   desde = Number(desde);
   Agencia.find({})
     .skip(desde)

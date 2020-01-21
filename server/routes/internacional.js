@@ -20,6 +20,9 @@ let imagenAntigua, pathViejo, pathNuevaImagen, id, desde;
 // ===============================================
 app.get("/", (req, res) => {
   desde = req.query.desde || 0;
+  if (desde < 0) {
+    desde = 0;
+  }
   desde = Number(desde);
   Internacional.find({})
     .skip(desde)
@@ -39,6 +42,33 @@ app.get("/", (req, res) => {
           total
         });
       });
+    });
+});
+
+// ===============================================
+// Buscar curso internacional
+// ===============================================
+app.get('/:id', [verificaToken, verificaAdmin_Role], (req, res) => {
+    id = req.params.id;
+    Internacional.findById(id, (err, internacional) => {
+        if (err) {
+            return res.status(500).json({
+                ok: false,
+                mensaje: "Error al buscar el curso internacional",
+                err
+            });
+        }
+        if (!internacional) {
+          return res.status(400).json({
+            ok: false,
+            mensaje: "El curso internacional no existe"
+          });
+        }
+        res.status(200).json({
+          ok: true,
+          internacional
+        });
+
     });
 });
 

@@ -20,6 +20,9 @@ let imagenAntigua, pathViejo, pathNuevaImagen, id, desde;
 // ===============================================
 app.get("/", (req, res) => {
   desde = req.query.desde || 0;
+  if (desde < 0) {
+    desde = 0;
+  }
   desde = Number(desde);
   PortafolioCurso.find({})
     .skip(desde)
@@ -38,6 +41,32 @@ app.get("/", (req, res) => {
           portafolioCursoDB,
           total
         });
+      });
+    });
+});
+
+// ===============================================
+// Buscar curso del portafolio
+// ===============================================
+app.get('/:id', [verificaToken, verificaAdmin_Role], (req, res) => {
+    id = req.params.id;
+    PortafolioCurso.findById(id, (err, portafolioCursoDB) => {
+      if (err) {
+        return res.status(500).json({
+          ok: false,
+          mensaje: "Error al buscar el curso del portafolio",
+          err
+        });
+      }
+      if (!portafolioCursoDB) {
+        return res.status(400).json({
+          ok: false,
+          mensaje: "El curso del portafolio no existe"
+        });
+      }
+      res.status(200).json({
+        ok: true,
+        portafolioCursoDB
       });
     });
 });
@@ -135,7 +164,7 @@ app.delete("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
     if (err) {
       return res.status(500).json({
         ok: false,
-        mensaje: "Error al buscar la agencia",
+        mensaje: "Error al buscar el curso del portafolio",
         err
       });
     }

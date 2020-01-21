@@ -20,6 +20,9 @@ let imagenAntigua, pathViejo, pathNuevaImagen, id, desde;
 // ===============================================
 app.get("/", (req, res) => {
   desde = req.query.desde || 0;
+  if (desde < 0) {
+    desde = 0;
+  }
   desde = Number(desde);
   Portafolio.find({})
     .skip(desde)
@@ -38,6 +41,32 @@ app.get("/", (req, res) => {
           portafolio,
           total
         });
+      });
+    });
+});
+
+// ===============================================
+// Buscar portafolio
+// ===============================================
+app.get('/:id', [verificaToken, verificaAdmin_Role], (req, res) => {
+    id = req.params.id;
+    Portafolio.findById(id, (err, portafolio) => {
+      if (err) {
+        return res.status(500).json({
+          ok: false,
+          mensaje: "Error al buscar el portafolio",
+          err
+        });
+      }
+      if (!portafolio) {
+        return res.status(400).json({
+          ok: false,
+          mensaje: "El portafolio no existe"
+        });
+      }
+      res.status(200).json({
+        ok: true,
+        portafolio
       });
     });
 });
@@ -133,7 +162,7 @@ app.put("/:id", cargarArchivo.single("imagen"), [verificaToken, verificaAdmin_Ro
 // ===============================================
 app.delete('/:id', [verificaToken, verificaAdmin_Role], (req, res) => {
   id = req.params.id;
-  Portafolio.findOneAndDelete(id, (err, portafolioDB) => {
+  Portafolio.findByIdAndDelete(id, (err, portafolioDB) => {
     if (err) {
       return res.status(500).json({
         ok: false,
@@ -144,7 +173,7 @@ app.delete('/:id', [verificaToken, verificaAdmin_Role], (req, res) => {
     if (!portafolioDB) {
       return res.status(500).json({
         ok: false,
-        mensaje: 'No existe ese portafolio'
+        mensaje: "No existe ese portafolio"
       });
     }
     fs.unlinkSync(`./uploads/portafolios/` + portafolioDB.imagen);

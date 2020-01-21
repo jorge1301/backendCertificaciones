@@ -1,4 +1,11 @@
 node_modules/
 .env
-uploads/
+uploads/agencias/
+uploads/avanzados/
+uploads/certificados/
+uploads/galerias/
+uploads/internacionales/
+uploads/portafolioCursos/
+uploads/portafolios/
+uploads/usuarios/
 assets/

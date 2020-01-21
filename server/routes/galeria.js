@@ -20,6 +20,9 @@ let imagenAntigua, pathViejo, pathNuevaImagen, id, desde;
 // ===============================================
 app.get("/", (req, res) => {
     desde = req.query.desde || 0;
+    if(desde < 0) {
+        desde = 0;
+    }
     desde = Number(desde);
     Galeria.find({})
         .skip(desde)
@@ -40,6 +43,33 @@ app.get("/", (req, res) => {
               });
             });
         });
+});
+
+// ===============================================
+// Buscar galeria
+// ===============================================
+app.get('/:id', [verificaToken, verificaAdmin_Role], (req, res) => {
+    id = req.params.id;
+    Galeria.findById(id, (err, galeria) => {
+        if (err) {
+            return res.status(500).json({
+                ok: false,
+                mensaje: "Error al buscar la galeria",
+                err
+            });
+        }
+        if (!galeria) {
+          return res.status(400).json({
+            ok: false,
+            mensaje: "La galeria no existe"
+          });
+        }
+        res.status(200).json({
+          ok: true,
+          galeria
+        });
+
+    });
 });
 
 // ===============================================

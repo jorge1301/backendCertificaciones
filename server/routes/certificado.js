@@ -19,7 +19,7 @@ let imagenAntigua, pathViejo, pathNuevaImagen, id, desde;
 // ===============================================
 // Obtener todos los certificados de un usuario
 // ===============================================
-app.get("/", (req, res) => {
+app.get("/documento", (req, res) => {
   let {cedula} = JSON.parse(req.body.data);
   Certificado.find({ cedula }, 'imagen').exec((err, certificadoDB) => {
     if (err) {
@@ -61,6 +61,9 @@ app.get("/", (req, res) => {
 // ===============================================
 app.get("/certificados", [verificaToken, verificaAdmin_Role], (req, res) => {
   desde = req.query.desde || 0;
+  if (desde < 0) {
+    desde = 0;
+  }
   desde = Number(desde);
   Certificado.find({})
     .skip(desde)
@@ -83,6 +86,32 @@ app.get("/certificados", [verificaToken, verificaAdmin_Role], (req, res) => {
     });
 });
 
+// ===============================================
+// Buscar certificado
+// ===============================================
+app.get('/:id', [verificaToken, verificaAdmin_Role], (req, res) => {
+    id = req.params.id;
+    Certificado.findById(id, (err, certificado) => {
+        if (err) {
+            return res.status(500).json({
+                ok: false,
+                mensaje: "Error al buscar el certificado",
+                err
+            });
+        }
+        if (!certificado) {
+          return res.status(400).json({
+            ok: false,
+            mensaje: "El certificado no existe"
+          });
+        }
+        res.status(200).json({
+          ok: true,
+          certificado
+        });
+
+    });
+});
 
 // ===============================================
 // Ingresar certificados

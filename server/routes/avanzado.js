@@ -20,6 +20,9 @@ let imagenAntigua, pathViejo, pathNuevaImagen, id, desde;
 // ===============================================
 app.get("/", (req, res) => {
   desde = req.query.desde || 0;
+  if (desde < 0) {
+    desde = 0;
+  }
   desde = Number(desde);
   Avanzado.find({})
     .skip(desde)
@@ -39,6 +42,33 @@ app.get("/", (req, res) => {
           total
         });
       });
+    });
+});
+
+// ===============================================
+// Buscar curso avanzado
+// ===============================================
+app.get('/:id', [verificaToken, verificaAdmin_Role], (req, res) => {
+    id = req.params.id;
+    Avanzado.findById(id, (err, avanzado) => {
+        if (err) {
+            return res.status(500).json({
+                ok: false,
+                mensaje: "Error al buscar el curso avanzado",
+                err
+            });
+        }
+        if (!avanzado) {
+          return res.status(400).json({
+            ok: false,
+            mensaje: "El curso avanzado no existe"
+          });
+        }
+        res.status(200).json({
+          ok: true,
+          avanzado
+        });
+
     });
 });
 
