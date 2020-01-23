@@ -2,22 +2,18 @@ const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
 let portafolioCursoShema = new Schema({
-    imagen: {
-        type: String,
-        required: false
-    },
-    requisitos: {
-        type: String,
-        required: [true, "Los requisitos son necesarios"]
-    },
-    incluye: {
-        type: String,
-        required: [true, "Lo que incluye en el curso es necesario"]
-    },
-    ciclos: [{
-        curso: String,
-        informacion: String
-    }]
+  imagen: {
+    type: String,
+    required: false
+  },
+  curso: {
+    type: String,
+    required: [true, "El nombre del curso es necesario"]
+  },
+  informacion: {
+    type: String,
+    required: [true, "La información es necesaria"]
+  }
 });
 
 module.exports = mongoose.model("PortafolioCursos", portafolioCursoShema);

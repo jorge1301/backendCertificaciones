@@ -75,7 +75,8 @@ app.get('/:busqueda', [verificaToken, verificaAdmin_Role], (req, res) => {
       certificados: respuestas[2],
       galerias: respuestas[3],
       internacionales: respuestas[4],
-      portafolio: respuestas[5]
+      portafolio: respuestas[5],
+      portafolioCursos: respuestas[6]
     });
   });
 });

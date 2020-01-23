@@ -20,13 +20,15 @@ let imagenAntigua, pathViejo, pathNuevaImagen, id, desde;
 // ===============================================
 app.get("/", (req, res) => {
   desde = req.query.desde || 0;
+  limite = req.query.limite || 0;
   if (desde < 0) {
     desde = 0;
   }
   desde = Number(desde);
+  limite = Number(limite);
   Internacional.find({})
     .skip(desde)
-    .limit(5)
+    .limit(limite)
     .exec((err, internacional) => {
       if (err) {
         return res.status(500).json({
@@ -194,6 +196,31 @@ app.delete("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
     res.status(200).json({
       ok: true,
       internacionalDB
+    });
+  });
+});
+
+// ===============================================
+// Eliminar una programación
+// ===============================================
+app.delete("/eliminar/programacion", (req, res) => {
+  id = req.query.id;
+  idProgramacion = req.query.idProgramacion;
+  Internacional.findOneAndUpdate(
+    { _id: id },
+    { $pull: { programacion: { _id: idProgramacion } } },
+    { safe: true, multi: true }
+  ).exec((err, internacional) => {
+    if (err) {
+      return res.status(500).json({
+        ok: false,
+        mensaje: "Error al eliminar",
+        err
+      });
+    }
+    res.status(200).json({
+      ok: true,
+      internacional
     });
   });
 });

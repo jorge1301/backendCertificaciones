@@ -81,13 +81,15 @@ app.post('/', cargarArchivo.single('imagen'), [verificaToken, verificaAdmin_Role
       mensaje: "No se ha seleccionado un archivo valido"
     });
   }
-  let { titulo, mision, vision, centro } = JSON.parse(req.body.data);
+  let { titulo, mision, vision, centro, requisitos, incluye } = JSON.parse(req.body.data);
   let portafolio = new Portafolio({
     titulo,
     imagen: req.file.filename,
     mision,
     vision,
-    centro
+    centro,
+    requisitos,
+    incluye
   });
   portafolio.save((err, portafolioDB) => {
     if (err) {
@@ -129,13 +131,15 @@ app.put("/:id", cargarArchivo.single("imagen"), [verificaToken, verificaAdmin_Ro
         mensaje: "El portafolio no existe"
       });
     }
-    let { titulo, mision, vision, centro } = JSON.parse(req.body.data);
+    let { titulo, mision, vision, centro, requisitos, incluye } = JSON.parse(req.body.data);
     imagenAntigua = portafolio.imagen;
     portafolio.titulo = titulo;
     portafolio.imagen = req.file === undefined ? imagenAntigua : req.file.filename;
     portafolio.mision = mision;
     portafolio.vision = vision;
     portafolio.centro = centro;
+    portafolio.requisitos = requisitos;
+    portafolio.incluye = incluye;
     portafolio.save((err, portafolioDB) => {
       if (err) {
         req.file ? fs.unlinkSync(pathNuevaImagen) : "";

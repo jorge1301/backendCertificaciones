@@ -81,12 +81,11 @@ app.post('/', cargarArchivo.single('imagen'), [verificaToken, verificaToken], (r
       mensaje: "No se ha seleccionado un archivo valido"
     });
   }
-  let { requisitos, incluye, ciclos } = JSON.parse(req.body.data);
+  let { curso, informacion } = JSON.parse(req.body.data);
   let portafolioCurso = new PortafolioCurso({
     imagen: req.file.filename,
-    requisitos,
-    incluye,
-    ciclos
+    curso,
+    informacion,
   });
   portafolioCurso.save((err, portafolioCursoDB) => {
     if (err) {
@@ -128,12 +127,11 @@ app.put("/:id", cargarArchivo.single("imagen"), [verificaToken, verificaAdmin_Ro
         mensaje: "El curso del portafolio no existe"
       });
     }
-    let { requisitos, incluye, ciclos } = JSON.parse(req.body.data);
+    let { curso, informacion } = JSON.parse(req.body.data);
     imagenAntigua = portafolio.imagen;
     portafolio.imagen = req.file === undefined ? imagenAntigua : req.file.filename;
-    portafolio.requisitos = requisitos;
-    portafolio.incluye = incluye;
-    portafolio.ciclos = ciclos;
+    portafolio.curso = curso;
+    portafolio.informacion = informacion;
     portafolio.save((err, portafolioDB) => {
       if (err) {
         req.file ? fs.unlinkSync(pathNuevaImagen) : "";
