@@ -29,7 +29,7 @@ app.use(require('./routes/app'));
 
 //Conexion BD
 mongoose.connect(
-    process.env.MONGODB_URI,
+    process.env.MONGODB,
     {
       useNewUrlParser: true,
       useCreateIndex: true,
