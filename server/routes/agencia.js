@@ -20,13 +20,15 @@ let imagenAntigua, pathViejo, pathNuevaImagen, id, desde;
 // ===============================================
 app.get("/", (req, res) => {
   desde = req.query.desde || 0;
+  limite = req.query.limite || 0;
   if (desde < 0) {
     desde = 0;
   }
   desde = Number(desde);
+  limite = Number(limite);
   Agencia.find({})
     .skip(desde)
-    .limit(5)
+    .limit(limite)
     .exec((err, agencia) => {
       if (err) {
         return res.status(500).json({

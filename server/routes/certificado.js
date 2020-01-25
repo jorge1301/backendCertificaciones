@@ -20,7 +20,7 @@ let imagenAntigua, pathViejo, pathNuevaImagen, id, desde;
 // Obtener todos los certificados de un usuario
 // ===============================================
 app.get("/documento", (req, res) => {
-  let {cedula} = JSON.parse(req.body.data);
+  let cedula = req.query.cedula;
   Certificado.find({ cedula }, 'imagen').exec((err, certificadoDB) => {
     if (err) {
       return res.status(500).json({
@@ -30,6 +30,7 @@ app.get("/documento", (req, res) => {
       });
     }
     let [datos] = certificadoDB;
+    
     if (!datos) {
       return res.status(400).json({
         ok: false,

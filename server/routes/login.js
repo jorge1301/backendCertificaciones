@@ -3,7 +3,27 @@ const app = express();
 const Usuario = require('../models/usuario');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const {
+  verificaToken,
+  verificaAdmin_Role
+} = require("../middlewares/autenticacion");
 
+// ===============================================
+// Renovar token
+// ===============================================
+app.get('/renuevatoken', [verificaToken, verificaAdmin_Role], (req, res) => {
+  let token = jwt.sign({ usuario: req.usuario }, process.env.SEED, {
+    expiresIn: "1d"
+  });
+  return res.status(200).json({
+    ok: true,
+    token
+  });
+});
+
+// ===============================================
+// Login del usuario
+// ===============================================
 app.post('/', (req, res) => {
     let body = req.body;
     Usuario.findOne({email: body.email}, (err, usuarioDB)=> {
