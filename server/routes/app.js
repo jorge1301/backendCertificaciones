@@ -14,7 +14,8 @@ const certificadoRoutes = require("./certificado");
 const busquedaRoutes = require("./busqueda");
 const uploadRoutes = require("./upload");
 const imagenesRoutes = require("./imagenes");
-
+const participanteRoutes = require("./participante");
+const quizGuardiaRoutes = require ("./quiz_guardia");
 
 //Rutas
 app.use("/login", loginRoutes);
@@ -29,5 +30,7 @@ app.use("/certificado", certificadoRoutes);
 app.use("/busqueda", busquedaRoutes);
 app.use("/upload", uploadRoutes );
 app.use("/imagen", imagenesRoutes);
+app.use('/participante', participanteRoutes);
+app.use("/quizGuardiaRoutes", quizGuardiaRoutes);
 
 module.exports = app;
