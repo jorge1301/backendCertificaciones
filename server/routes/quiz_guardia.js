@@ -40,6 +40,31 @@ app.get("/", (req, res) => {
 });
 
 // ===============================================
+// Obtener 20 preguntas aleatorias
+// ===============================================
+app.get("/aleatorio", (req, res) => {
+  Quiz.aggregate([{$sample:{size:20}}])
+  .exec((err, quiz) => {
+    if (err) {
+      return res.status(500).json({
+        ok: false,
+        mensaje: "Error al cargar recursos del cuestionario"
+      });
+    }
+    if (!quiz) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "No existen preguntas"
+      });
+    }
+     res.status(200).json({
+       ok: true,
+       quiz
+     });
+  })
+});
+
+// ===============================================
 // Buscar quiz
 // ===============================================
 app.get("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
@@ -66,36 +91,10 @@ app.get("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
 });
 
 // ===============================================
-// Obtener 20 preguntas aleatorias
-// ===============================================
-app.get("/cuestionario", [verificaToken, verificaAdmin_Role], (req, res) => {
-  id = req.params.id;
-  Quiz.aggregate([{$sample:{size:20}}])
-  .exec((err, quiz) => {
-    if (err) {
-      return res.status(500).json({
-        ok: false,
-        mensaje: "Error al cargar recursos del cuestionario"
-      });
-    }
-    if (!quiz) {
-      return res.status(400).json({
-        ok: false,
-        mensaje: "No existen preguntas"
-      });
-    }
-     res.status(200).json({
-       ok: true,
-       quiz
-     });
-  })
-});
-
-// ===============================================
 // Ingresar informacion del participante
 // ===============================================
 app.post("/", [verificaToken, verificaAdmin_Role], (req, res) => {
-  let { pregunta, opcion1, opcion2, opcion3, opcion4, respuesta } = JSON.parse(req.body.data);
+  let { pregunta, opcion1, opcion2, opcion3, opcion4, respuesta } = req.body;
   let quiz = new Quiz({
     pregunta,
     opcion1,
@@ -138,7 +137,7 @@ app.put("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
         mensaje: "La pregunta no existe"
       });
     }
-    let { pregunta, opcion1, opcion2, opcion3, opcion4, respuesta } = JSON.parse(req.body.data);
+    let { pregunta, opcion1, opcion2, opcion3, opcion4, respuesta } = req.body;
     quiz.pregunta = pregunta;
     quiz.opcion1 = opcion1;
     quiz.opcion2 = opcion2;
@@ -174,7 +173,7 @@ app.delete("/:id", [verificaToken, verificaAdmin_Role], (req, res) => {
         err
       });
     }
-    if (!participanteDB) {
+    if (!quizDB) {
       return res.status(400).json({
         ok: false,
         mensaje: "No existe esa pregunta"

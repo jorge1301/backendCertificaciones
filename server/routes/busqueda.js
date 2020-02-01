@@ -7,7 +7,8 @@ const Galeria = require("../models/galeria");
 const Internacional = require("../models/internacional");
 const Portafolio = require("../models/portafolio");
 const PortafolioCursos = require("../models/portafolio_curso");
-
+const Alumno = require("../models/alumno");
+const Quiz = require("../models/quiz_guardia");
 const {
   verificaToken,
   verificaAdmin_Role
@@ -41,6 +42,12 @@ app.get('/coleccion/:tabla/:busqueda', [verificaToken, verificaAdmin_Role], (req
     case "portafolioCursos":
       promesa = buscarPortafolioCursos(regex);
       break;
+    case "alumno":
+      promesa = buscarAlumnos(regex);
+      break;
+    case "quizGuardia":
+      promesa = buscarQuizGuardia(regex);
+      break;
 
     default:
       return res.status(400).json({
@@ -56,30 +63,30 @@ app.get('/coleccion/:tabla/:busqueda', [verificaToken, verificaAdmin_Role], (req
   });
 });
 
-app.get('/:busqueda', [verificaToken, verificaAdmin_Role], (req, res) => {
-  let busqueda = req.params.busqueda;
-  let regex = new RegExp(busqueda,'i');
-  Promise.all([
-    buscarAgencias(regex),
-    buscarCursosAvanzados(regex),
-    buscarCertificados(regex),
-    buscarGaleria(regex),
-    buscarCursosInternacionales(regex),
-    buscarPortafolio(regex),
-    buscarPortafolioCursos(regex)
-  ]).then(respuestas => {
-    res.status(200).json({
-      ok: true,
-      agencias: respuestas[0],
-      avanzados: respuestas[1],
-      certificados: respuestas[2],
-      galerias: respuestas[3],
-      internacionales: respuestas[4],
-      portafolio: respuestas[5],
-      portafolioCursos: respuestas[6]
-    });
-  });
-});
+// app.get('/:busqueda', [verificaToken, verificaAdmin_Role], (req, res) => {
+//   let busqueda = req.params.busqueda;
+//   let regex = new RegExp(busqueda,'i');
+//   Promise.all([
+//     buscarAgencias(regex),
+//     buscarCursosAvanzados(regex),
+//     buscarCertificados(regex),
+//     buscarGaleria(regex),
+//     buscarCursosInternacionales(regex),
+//     buscarPortafolio(regex),
+//     buscarPortafolioCursos(regex)
+//   ]).then(respuestas => {
+//     res.status(200).json({
+//       ok: true,
+//       agencias: respuestas[0],
+//       avanzados: respuestas[1],
+//       certificados: respuestas[2],
+//       galerias: respuestas[3],
+//       internacionales: respuestas[4],
+//       portafolio: respuestas[5],
+//       portafolioCursos: respuestas[6]
+//     });
+//   });
+// });
 
 function buscarAgencias(regex) {
   return new Promise((resolve, reject) => {
@@ -168,12 +175,40 @@ function buscarPortafolio(regex) {
 function buscarPortafolioCursos(regex) {
   return new Promise((resolve, reject) => {
     PortafolioCursos.find()
-      .or([{ titulo: regex }])
-      .exec((err, portafolio) => {
+      .or([{ curso: regex }])
+      .exec((err, portafolioCursos) => {
         if (err) {
           reject("Error al cargar el curso del portafolio", err);
         } else {
-          resolve(portafolio);
+          resolve(portafolioCursos);
+        }
+      });
+  });
+}
+
+function buscarAlumnos(regex) {
+  return new Promise((resolve, reject) => {
+    Alumno.find()
+      .or([{ cedula: regex },{nombre: regex}])
+      .exec((err, alumnos) => {
+        if (err) {
+          reject("Error al cargar los alumnos", err);
+        } else {
+          resolve(alumnos);
+        }
+      });
+  });
+}
+
+function buscarQuizGuardia(regex) {
+  return new Promise((resolve, reject) => {
+    Quiz.find()
+      .or([{ pregunta: regex }])
+      .exec((err, quiz) => {
+        if (err) {
+          reject("Error al cargar el quiz", err);
+        } else {
+          resolve(quiz);
         }
       });
   });

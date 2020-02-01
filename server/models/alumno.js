@@ -1,12 +1,13 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
-let participanteShema = new Schema({
+let alumnoShema = new Schema({
+  cedula: { type: String, required: [true, "La cedula es necesaria"], unique: true},
   nombre: { type: String, required: [true, "El nombre es necesario"]},
   email: { type: String, required: [true, "El email es necesario"]},
   aciertos: { type: String, required: false },
   estado: {type: Boolean, required: false},
   quiz: { type: String, required: [true, "Debe asociar el tipo de preguntas para el alumno"]}
-}, {collection: 'participante'});
+}, {collection: 'alumnos'});
 
-module.exports = mongoose.model('Participante', participanteShema);
+module.exports = mongoose.model("Alumno", alumnoShema);

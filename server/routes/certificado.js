@@ -134,9 +134,9 @@ app.post("/", cargarArchivo.single("imagen"), [verificaToken, verificaAdmin_Role
     if (err) {
       if (err.code === 11000) {
         fs.unlinkSync("./uploads/certificados/" + req.file.filename);
-        return res.status(500).json({
+        return res.status(400).json({
           ok: false,
-          mensaje: 'Ya existe ese usuario'
+          mensaje: 'Ya existe ese alumno'
         });
       }
       else {
